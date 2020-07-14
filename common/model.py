@@ -1,12 +1,11 @@
-
-import numpy as np
 import torch
-from torch.autograd import Variable
+import numpy as np
+
 from torch import nn
 from torch.nn import functional as F
+from torch.autograd import Variable
 from common.layers import ConvNorm, LinearNorm
 from common.utils import to_gpu, get_mask_from_lengths, get_mask_from_lengths_window_and_time_step
-from common.fp16_optimizer import fp32_to_fp16, fp16_to_fp32
 
 
 class LocationLayer(nn.Module):
@@ -56,7 +55,6 @@ class Attention(nn.Module):
         -------
         alignment (batch, max_time)
         """
-
         processed_query = self.query_layer(query.unsqueeze(1))
         processed_attention_weights = self.location_layer(attention_weights_cat)
         energies = self.v(torch.tanh(
@@ -101,9 +99,7 @@ class Prenet(nn.Module):
         if seed is not None:
             torch.manual_seed(seed)
         for linear in self.layers:
-            # x = F.dropout(F.relu(linear(x)), p=0.5, training=self.training)
             x = F.dropout(F.relu(linear(x)), p=0.5, training=True)
-
         return x
 
 
@@ -111,7 +107,6 @@ class Postnet(nn.Module):
     """Postnet
         - Five 1-d convolution with 512 channels and kernel size 5
     """
-
     def __init__(self, hparams):
         super(Postnet, self).__init__()
         self.convolutions = nn.ModuleList()
@@ -149,10 +144,8 @@ class Postnet(nn.Module):
 
     def forward(self, x):
         for i in range(len(self.convolutions) - 1):
-            x = F.dropout(torch.tanh(self.convolutions[i](x)), 0.5,
-                          self.training)
+            x = F.dropout(torch.tanh(self.convolutions[i](x)), 0.5, self.training)
         x = F.dropout(self.convolutions[-1](x), 0.5, self.training)
-
         return x
 
 
@@ -187,10 +180,8 @@ class Encoder(nn.Module):
     def forward(self, x, input_lengths):
         # x: (B, D, T) -> (B, T, D) -> (B, D, T)
         x = self.prenet(x.transpose(1, 2)).transpose(1, 2)
-
         for conv in self.convolutions:
             x = F.dropout(F.relu(conv(x)), 0.5, self.training)
-
         x = x.transpose(1, 2)
 
         # pytorch tensor are not reversible, hence the conversion
@@ -199,23 +190,17 @@ class Encoder(nn.Module):
 
         self.lstm.flatten_parameters()
         outputs, _ = self.lstm(x)
-
         outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs, batch_first=True)
-
         return outputs
 
     def inference(self, x, seed=None):
         # x: (B, D, T) -> (B, T, D) -> (B, D, T)
         x = self.prenet(x.transpose(1, 2), seed).transpose(1, 2)
-
         for conv in self.convolutions:
             x = F.dropout(F.relu(conv(x)), 0.5, self.training)
-
         x = x.transpose(1, 2)
-
         self.lstm.flatten_parameters()
         outputs, _ = self.lstm(x)
-
         return outputs
 
 
@@ -351,7 +336,6 @@ class Decoder(nn.Module):
             acoustic_outputs.size(0), -1, self.n_acoustic_feat_dims)
         # (B, T_out, n_acoustic_feat_dims) -> (B, n_acoustic_feat_dims, T_out)
         acoustic_outputs = acoustic_outputs.transpose(1, 2)
-
         return acoustic_outputs, gate_outputs, alignments
 
     def decode(self, decoder_input, attention_windowed_mask=None):
@@ -503,83 +487,10 @@ class Decoder(nn.Module):
         return acoustic_outputs, gate_outputs, alignments
 
 
-# class Tacotron2(nn.Module):
-#     def __init__(self, hparams):
-#         super(Tacotron2, self).__init__()
-#         self.mask_padding = hparams.mask_padding
-#         self.fp16_run = hparams.fp16_run
-#         self.n_acoustic_feat_dims = hparams.n_acoustic_feat_dims
-#         self.encoder = Encoder(hparams)
-#         self.decoder = Decoder(hparams)
-#         self.postnet = Postnet(hparams)
-
-#     def parse_batch(self, batch):
-#         ppg_padded, input_lengths, acoustic_padded, gate_padded, output_lengths = batch
-#         ppg_padded = to_gpu(ppg_padded).float()
-#         input_lengths = to_gpu(input_lengths).long()
-#         max_len = torch.max(input_lengths.data).item()
-#         acoustic_padded = to_gpu(acoustic_padded).float()
-#         gate_padded = to_gpu(gate_padded).float()
-#         output_lengths = to_gpu(output_lengths).long()
-
-#         return ((ppg_padded, input_lengths, acoustic_padded, max_len,
-#                  output_lengths),
-#                 (acoustic_padded, gate_padded))
-
-#     def parse_input(self, inputs):
-#         inputs = fp32_to_fp16(inputs) if self.fp16_run else inputs
-#         return inputs
-
-#     def parse_output(self, outputs, output_lengths=None):
-#         if self.mask_padding and output_lengths is not None:
-#             mask = ~get_mask_from_lengths(output_lengths)
-#             mask = mask.expand(self.n_acoustic_feat_dims, mask.size(0),
-#                                mask.size(1))
-#             mask = mask.permute(1, 0, 2)
-
-#             outputs[0].data.masked_fill_(mask, 0.0)
-#             outputs[1].data.masked_fill_(mask, 0.0)
-#             outputs[2].data.masked_fill_(mask[:, 0, :], 1e3)  # gate energies
-
-#         outputs = fp16_to_fp32(outputs) if self.fp16_run else outputs
-#         return outputs
-
-#     def forward(self, inputs, teacher_forcing=1):
-#         inputs, input_lengths, targets, max_len, output_lengths = self.parse_input(inputs)
-#         input_lengths, output_lengths = input_lengths.data, output_lengths.data
-
-#         # inputs: (B, D, T)
-#         encoder_outputs = self.encoder(inputs, input_lengths)
-
-#         acoustic_outputs, gate_outputs, alignments = self.decoder(
-#             encoder_outputs, targets, memory_lengths=input_lengths, teacher_forcing=teacher_forcing)
-
-#         acoustic_outputs_postnet = self.postnet(acoustic_outputs)
-#         acoustic_outputs_postnet = acoustic_outputs + acoustic_outputs_postnet
-
-#         return self.parse_output([acoustic_outputs, acoustic_outputs_postnet, gate_outputs, alignments],
-#                                  output_lengths)
-
-#     def inference(self, inputs):
-#         inputs = self.parse_input(inputs)
-#         input_lengths = torch.cuda.LongTensor([t.shape[1] for t in inputs])
-
-#         encoder_outputs = self.encoder.inference(inputs)
-#         acoustic_outputs, gate_outputs, alignments = self.decoder.inference(encoder_outputs, input_lengths)
-
-#         acoustic_outputs_postnet = self.postnet(acoustic_outputs)
-#         acoustic_outputs_postnet = acoustic_outputs + acoustic_outputs_postnet
-
-#         outputs = self.parse_output([acoustic_outputs, acoustic_outputs_postnet, gate_outputs, alignments])
-
-#         return outputs
-
-
 class Tacotron2_multispeaker(nn.Module):
     def __init__(self, hparams):
         super(Tacotron2_multispeaker, self).__init__()
         self.mask_padding = hparams.mask_padding
-        self.fp16_run = hparams.fp16_run
         self.n_acoustic_feat_dims = hparams.n_acoustic_feat_dims
         self.encoder = Encoder(hparams)
         self.decoder = Decoder(hparams)
@@ -599,7 +510,6 @@ class Tacotron2_multispeaker(nn.Module):
                 (acoustic_padded, gate_padded))
 
     def parse_input(self, inputs):
-        inputs = fp32_to_fp16(inputs) if self.fp16_run else inputs
         return inputs
 
     def parse_output(self, outputs, output_lengths=None):
@@ -613,20 +523,14 @@ class Tacotron2_multispeaker(nn.Module):
             outputs[1].data.masked_fill_(mask, 0.0)
             outputs[2].data.masked_fill_(mask[:, 0, :], 1e3)  # gate energies
 
-        outputs = fp16_to_fp32(outputs) if self.fp16_run else outputs
         return outputs
 
     def forward(self, inputs, spk_emb, teacher_forcing=1):
         inputs, input_lengths, targets, max_len, output_lengths = self.parse_input(inputs)
         input_lengths, output_lengths = input_lengths.data, output_lengths.data
 
-        # inputs: (B, D, T)
         encoder_outputs = self.encoder(inputs, input_lengths)
-        # encoder_outputs: (B, T, D)
-
-        # spk_emb: (B, D, T)
         encoder_outputs = torch.cat((encoder_outputs, spk_emb.transpose(1, 2)), dim=-1)
-
         acoustic_outputs, gate_outputs, alignments = self.decoder(
             encoder_outputs, targets, memory_lengths=input_lengths, teacher_forcing=teacher_forcing)
 

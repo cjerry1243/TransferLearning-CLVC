@@ -1,4 +1,3 @@
-
 import os
 import torch
 import random
@@ -52,10 +51,6 @@ class Tacotron2Logger(SummaryWriter):
                 gate_targets[idx].data.cpu().numpy(),
                 torch.sigmoid(gate_outputs[idx]).data.cpu().numpy()),
                 iteration, dataformats='HWC')
-        ### write output mel to file
-        # out = mel_outputs[idx]
-        # out = torch.FloatTensor([out[:, f].tolist() for f in range(out.shape[1]) if not torch.all(out[:, f] == 0)]).t()
-        # torch.save(out, os.path.join(self.logdir, "..", "mels", "mel_outputs_it{}.pt".format(iteration)))
 
 
 class WaveglowLogger(SummaryWriter):

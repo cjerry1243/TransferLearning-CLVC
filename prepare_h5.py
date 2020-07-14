@@ -29,10 +29,9 @@ def frame_inference(wavpath, model, use_cuda=True, pad_zero=False, sig=None):
     # return sequence
 
 
-def creat_vcc_audio_h5():
-    wav_root_path = "vcc2020_training"
+def create_vcc_audio_h5(wav_root_path="vcc2020_training", h5_audio_path="VCC_audio.h5"):
     spks = ['SEF1', 'SEF2', 'SEM1', 'SEM2', 'TEF1', 'TEF2', 'TEM1', 'TEM2', 'TFF1', 'TFM1', 'TGF1', 'TGM1', 'TMF1', 'TMM1']
-    with h5py.File("VCC_audio_24k_16k.h5", "w") as h5:
+    with h5py.File(h5_audio_path, "w") as h5:
         for i, spk in tqdm(enumerate(spks)):
             h5.create_group(str(i))
             wavfiles = os.listdir(os.path.join(wav_root_path, spk))
@@ -46,10 +45,10 @@ def creat_vcc_audio_h5():
 
 
 
-def create_vcc_spk_h5():
+def create_vcc_spk_h5(config_path="config_24k.json", h5_audio_path="VCC_audio.h5", h5_feature_path="VCC_features.h5"):
     use_cuda = True
 
-    with open("config_24k.json") as f:
+    with open(config_path) as f:
         data = f.read()
     data_config = json.loads(data)["data_config"]
     mel2samp_24k = Mel2Samp(**data_config)
@@ -72,19 +71,16 @@ def create_vcc_spk_h5():
         mel = np.log10(np.dot(mel_basis, np.abs(y) ** 2) + 1e-6)
         return mel
 
-    # model = torch.jit.load(os.path.join("ppg", "trace512_77_correct1_epoch-352_feature.pth"))
-    model = torch.jit.load(os.path.join("ppg", "trace512xbi_77_correct1_epoch-281_feature.pth"))
+    model = torch.jit.load(os.path.join("ppg", "trace512_77_correct1_epoch-352_feature.pth"))
     model = model.cuda().eval() if use_cuda else model.cpu().eval()
 
-    # model_ppg = torch.jit.load(os.path.join("ppg", "trace512_77_correct1_epoch-352.pth"))
-    model_ppg = torch.jit.load(os.path.join("ppg", "trace512xbi_77_correct1_epoch-281.pth"))
+    model_ppg = torch.jit.load(os.path.join("ppg", "trace512_77_correct1_epoch-352.pth"))
     model_ppg = model_ppg.cuda().eval() if use_cuda else model_ppg.cpu().eval()
 
     min_audio_seconds = 10
     num_spk_dvecs = 30
-    h5_audio = h5py.File("VCC_audio_24k_16k.h5", "r")
-    # with h5py.File("VCC_ppg512_16kmel_24kmel_spk.h5", "w") as h5:
-    with h5py.File("VCC_ppgbi1024_16kmel_24kmel_spk.h5", "w") as h5:
+    h5_audio = h5py.File(h5_audio_path, "r")
+    with h5py.File(h5_feature_path, "w") as h5:
         for i in tqdm(range(14)):
             audio_24k = h5_audio[str(i)]["24k"][:]/MAX_WAV_VALUE
             audio = h5_audio[str(i)]["16k"][:]/MAX_WAV_VALUE
@@ -133,12 +129,16 @@ def create_vcc_spk_h5():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--config', type=str, default="config_24k.json")
     parser.add_argument('-m', '--mode', type=int, required=True)
+    parser.add_argument('-vcc', '--vcc_root_path', type=str, default="vcc2020_training")
+    parser.add_argument('-a', '--h5_audio_path', type=str, default="VCC_audio.h5")
+    parser.add_argument('-f', '--h5_feature_path', type=str, default="VCC_features.h5")
     args = parser.parse_args()
     if args.mode == 0:
-    	creat_vcc_audio_h5()
+    	create_vcc_audio_h5(wav_root_path=args.vcc_root_path, h5_audio_path=args.h5_audio_path)
     elif args.mode == 1:
-    	create_vcc_spk_h5()
+    	create_vcc_spk_h5(config_path=args.config, h5_audio_path=args.h5_audio_path, h5_feature_path=args.h5_feature_path)
     else:
     	print("Error. Invalid mode.")
 

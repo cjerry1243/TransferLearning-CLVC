@@ -1,5 +1,3 @@
-
-
 class LossScaler:
 
     def __init__(self, scale=1):

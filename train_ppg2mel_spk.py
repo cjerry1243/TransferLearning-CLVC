@@ -48,12 +48,13 @@ def pad_collate(batch):
 
 
 class PPG2MEL_Dataset_spk(torch.utils.data.Dataset):
-    def __init__(self, h5file, type=None, max_frames=600, random=False):
+    def __init__(self, h5file, type=None, max_frames=600, random=False, ppg_dim=None):
         self.h5file = h5file
         self.h5 = None
         self.type = type
         self.max_frames = max_frames
         self.random = random
+        self.ppg = "ppg_70" if ppg_dim == 72 else "ppg"
     def __getitem__(self, item):
         if self.h5 is None:
             self.h5 = h5py.File(self.h5file, "r")
@@ -62,14 +63,13 @@ class PPG2MEL_Dataset_spk(torch.utils.data.Dataset):
         if self.random:
             self.max_frames = np.random.randint(400, 800)
         utterance_gp = self.h5[str(item)] # if item < 110 else self.h5
-        num_frames = utterance_gp["ppg"].shape[0]
+        num_frames = utterance_gp[self.ppg].shape[0]
         start = np.random.randint(0, num_frames - self.max_frames)
         end = start + self.max_frames
-        ppg = torch.softmax(torch.FloatTensor(utterance_gp["ppg_70"][start:end]), dim=-1)
+        ppg = torch.softmax(torch.FloatTensor(utterance_gp[self.ppg][start:end]), dim=-1)
         zcr = torch.log(torch.FloatTensor(utterance_gp["zcr"][start:end]) + 1e-8).unsqueeze(1)
         log_energy = torch.FloatTensor(utterance_gp["log_energy"][start:end]).unsqueeze(1)
         mel = torch.FloatTensor(utterance_gp["mel_24k"][start: end]) # 861 frames of mel
-
         dvec = torch.FloatTensor(utterance_gp["dvec"][np.random.randint(0, utterance_gp["dvec"].shape[0]), :])
         return torch.cat((ppg, zcr, log_energy), dim=-1), mel, dvec
 
@@ -91,8 +91,8 @@ def pad_collate_spk(batch):
 
 
 def prepare_dataloaders(hparams):
-    dataset = PPG2MEL_Dataset_spk("VCC_ppg512_16kmel_24kmel_spk.h5", max_frames=600, random=True)
-    val_dataset = PPG2MEL_Dataset_spk("VCC_ppg512_16kmel_24kmel_spk.h5", max_frames=800, random=False)
+    dataset = PPG2MEL_Dataset_spk(hparams.h5_feature_path, max_frames=600, random=True, ppg_dim=hparams.n_symbols)
+    val_dataset = PPG2MEL_Dataset_spk(hparams.h5_feature_path, max_frames=800, random=False, ppg_dim=hparams.n_symbols)
 
     train_loader = DataLoader(dataset, num_workers=min(hparams.batch_size//2, 8),
                               sampler=RandomSampler(0, 14),
@@ -182,7 +182,6 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
           rank, group_name, hparams):
 
     os.makedirs(os.path.join(hparams.output_directory, "ckpt"), exist_ok=True)
-    os.makedirs(os.path.join(hparams.output_directory, "mels"), exist_ok=True)
 
     torch.manual_seed(hparams.seed)
     torch.cuda.manual_seed(hparams.seed)
@@ -243,15 +242,14 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
             optimizer.step()
             iters_from_last_save = (iteration - 1) % hparams.iters_per_checkpoint + 1
             running_loss = reduced_loss/iters_from_last_save
-            overflow = False
 
-            if not overflow and not math.isnan(reduced_loss) and rank == 0:
+            if not math.isnan(reduced_loss) and rank == 0:
                 duration += time.perf_counter() - start
                 print("Iteration: {} Loss: {:.6f} Teacher: {:.8f} {:.2f}s/it              "
                       "".format(iteration, running_loss, teacher_prob, duration/iters_from_last_save), end="\r")
                 logger.log_training(running_loss, learning_rate, duration/iters_from_last_save, iteration)
 
-            if not overflow and (iteration % hparams.iters_per_checkpoint == 0):
+            if iteration % hparams.iters_per_checkpoint == 0:
                 print()
                 duration = 0.
                 reduced_loss = 0.
@@ -270,10 +268,6 @@ if __name__ == '__main__':
 
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.benchmark = True
-
-    # print("FP16 Run:", hparams.fp16_run)
-    print("Dynamic Loss Scaling:", hparams.dynamic_loss_scaling)
-    # print("Distributed Run:", hparams.distributed_run)
 
     train(hparams.output_directory, hparams.log_directory,
           hparams.checkpoint_path, hparams.warm_start, hparams.n_gpus,

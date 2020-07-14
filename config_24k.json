@@ -1,7 +1,7 @@
 {
     "train_config": {
         "fp16_run": true,
-        "output_directory": "checkpoints_24k_VCC",
+        "output_directory": "checkpoints_24k_VCC2020",
         "epochs": 100000,
         "learning_rate": 1e-4,
         "sigma": 1.0,
@@ -12,7 +12,7 @@
         "with_tensorboard": true
     },
     "data_config": {
-        "training_files": "train_files.txt",
+        "h5_melfile": "VCC_audio.h5",
         "segment_length": 24000,
         "sampling_rate": 24000,
         "filter_length": 768,
@@ -20,10 +20,6 @@
         "win_length": 768,
         "mel_fmin": 0.0,
         "mel_fmax": 8000.0
-    },
-    "dist_config": {
-        "dist_backend": "nccl",
-        "dist_url": "tcp://localhost:54321"
     },
 
     "waveglow_config": {

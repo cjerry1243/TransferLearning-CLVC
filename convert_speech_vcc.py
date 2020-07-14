@@ -26,24 +26,20 @@ torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
 
 parser = argparse.ArgumentParser()
-# parser.add_argument('-w', "--wavpath", type=str, required=True)
-# parser.add_argument('-r', "--reference", type=str, required=True)
 parser.add_argument('-ch', "--checkpoint_path", type=str, required=True)
-parser.add_argument('-wg', "--waveglow", type=str, default="checkpoints_24k_VCC2020/waveglow_it248000.pt")
-parser.add_argument('-m', "--model", type=str, default=os.path.join("ppg", "trace512xbi_77_correct1_epoch-281_feature.pth"))
+parser.add_argument('-wg', "--waveglow", type=str, required=True)
+parser.add_argument('-m', "--model", type=str, required=True)
 parser.add_argument('-s', "--sigma", type=float, default=0.8)
 parser.add_argument('-o', "--outputs", type=str, required=True)
-parser.add_argument("--sampling_rate", default=24000, type=int)
-parser.add_argument("--cuda", default=True, type=bool)
-parser.add_argument("--is_fp16", default=True, type=float)
-parser.add_argument("-d", "--denoiser_strength", default=0.08, type=float, help='Removes model bias. Start with 0.1 and adjust')
-parser.add_argument("-dmd", "--dvec_mode", default=1, type=int, help='dvec mode, '
-                                                                     '0: from speaker embedder, '
-                                                                     '1: from dictionary, '
-                                                                     '2: one-hot, '
-                                                                     '3: zeros, single speaker')
+parser.add_argument("--sampling_rate", type=int, default=24000)
+parser.add_argument("--cuda", type=bool, default=True)
+parser.add_argument("--is_fp16", type=bool, default=True)
+parser.add_argument('-f', '--h5_feature_path', type=str, default="VCC_features.h5")
+parser.add_argument('-vcc', '--vcc_root_path', type=str, default="vcc2020_evaluation")
+parser.add_argument("-d", "--denoiser_strength", type=float, default=0.08, help='Removes model bias.')
 args = parser.parse_args()
 os.makedirs(args.outputs, exist_ok=True)
+
 
 model = torch.jit.load(args.model).eval()
 
@@ -69,12 +65,8 @@ if args.denoiser_strength > 0:
 	denoiser = Denoiser(waveglow).cuda()
 
 
-
-if args.dvec_mode != 1:
-	print("Invalid dvec mode for VCC2020, only 1 is supported.")
-h5 = h5py.File("VCC_ppgbi1024_16kmel_24kmel_spk.h5", "r")
-wav_root_path = "vcc2020_evaluation"
-wav_root_path = "vcc2020_dev"
+h5 = h5py.File(args.h5_feature_path, "r")
+wav_root_path = args.vcc_root_path
 spks = ['SEF1', 'SEF2', 'SEM1', 'SEM2', 'TEF1', 'TEF2', 'TEM1', 'TEM2', 'TFF1', 'TFM1', 'TGF1', 'TGM1', 'TMF1', 'TMM1']
 for sid in range(0, 4):
 	source_name = spks[sid]
@@ -88,10 +80,7 @@ for sid in range(0, 4):
 		                         source,
 		                         np.zeros([512 + 160 * (7 - 3), ])))
 		amp = 32768 * 0.8 / np.max(np.abs(source))
-		# interval = librosa.effects.split(source / 32768, 20)
-		# for ii in interval:
-		# 	seg_amp = 32768 * 0.8 / np.max(np.abs(source[ii[0]: ii[1]]))
-		# 	source[ii[0]: ii[1]] = source[ii[0]: ii[1]] * seg_amp ** 0.5
+
 		ppg = frame_inference(wavpath, model, use_cuda=args.cuda, sig=source).cuda().detach()  # (T1, D)
 		zcr = np.zeros([math.ceil(len(source) / 160), ], dtype=np.float32)
 		log_energy = np.zeros([math.ceil(len(source) / 160), ], dtype=np.float32)
@@ -100,7 +89,6 @@ for sid in range(0, 4):
 				break
 			seg = source[seg_start: seg_start + 512] / 32768.0
 			log_energy[frame_id] = np.log(amp ** 0.5 * np.sum(seg ** 2) + 1e-8)
-			# log_energy[frame_id] = np.log(np.sum(seg ** 2) + 1e-8)
 			sign_seg = np.sign(seg)
 			zcr[frame_id] = np.mean(sign_seg[:-1] != sign_seg[1:])
 		zcr = zcr[7:frame_id - 7]
@@ -115,7 +103,6 @@ for sid in range(0, 4):
 
 		for tid in range(4, 14):
 			target_name = spks[tid]
-			# dvec = torch.FloatTensor(h5[str(tid)]["dvec"][np.random.randint(0, h5[str(tid)]["dvec"].shape[0]), :]).cuda()
 			dvec = torch.mean(torch.FloatTensor(h5[str(tid)]["dvec"][:]), dim=0).cuda()
 
 			print("Source: {}, {}/{}, Wav: {}, Target: {}     ".format(source_name, wi+1, len(wavnames), wavname, target_name), end="\r")
@@ -126,12 +113,11 @@ for sid in range(0, 4):
 				audio = waveglow.infer(mel, sigma=args.sigma)
 				if args.denoiser_strength > 0:
 					audio = denoiser(audio.cuda(), args.denoiser_strength)
-				audio = audio * 32768
+				audio = audio * MAX_WAV_VALUE
 
 			audio = audio.squeeze().cpu().numpy().astype('int16')
 			audio_path = os.path.join(args.outputs, "{}_{}_{}".format(target_name, source_name, wavname))
 			write(audio_path, args.sampling_rate, audio)
-		# exit()
 
 print()
 

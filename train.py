@@ -44,7 +44,7 @@ class RandomSampler(torch.utils.data.Sampler):
         return self.max_id - self.min_id
 
 
-def train(num_gpus, rank, group_name, output_directory, epochs, learning_rate,
+def train(output_directory, epochs, learning_rate,
           sigma, iters_per_checkpoint, batch_size, seed, fp16_run,
           checkpoint_path, with_tensorboard):
     torch.manual_seed(seed)
@@ -126,10 +126,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', type=str,
                         help='JSON file for configuration')
-    parser.add_argument('-r', '--rank', type=int, default=0,
-                        help='rank of process for distributed')
-    parser.add_argument('-g', '--group_name', type=str, default='',
-                        help='name of group for distributed')
     args = parser.parse_args()
 
     # Parse configs.  Globals nicer in this case
@@ -139,13 +135,9 @@ if __name__ == "__main__":
     train_config = config["train_config"]
     global data_config
     data_config = config["data_config"]
-    global dist_config
-    dist_config = config["dist_config"]
     global waveglow_config
     waveglow_config = config["waveglow_config"]
 
-    num_gpus = torch.cuda.device_count()
-
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.benchmark = True
-    train(num_gpus, args.rank, args.group_name, **train_config)
+    train(**train_config)
