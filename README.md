@@ -1,7 +1,10 @@
 # TransferLearning-CLVC
 
 Imlementation of _Transfer Learning from Monolingual ASR to Transcription-free Cross-lingual Voice Conversion._  
-We provide our pretrained monolingual uni-directional acoustic model and speaker encoder for reproduction. According to our paper, the uni-directinal content extractor is not  All the VC data are from Voice Conversion Challenge 2020 (http://www.vc-challenge.org/) and all the generated speech are submitted to the challenge for listening review including intra-lingual and cross-lingual VC tasks.  
+
+We provide our pretrained monolingual uni-directional acoustic model and speaker encoder for reproduction. According to our paper, the uni-directinal content extractor may not generate the best result, but it's good enough.  
+  
+All the VC data are from Voice Conversion Challenge 2020 (http://www.vc-challenge.org/) and all the generated speech are submitted to the challenge for listening review including intra-lingual and cross-lingual VC tasks.  
 
 For more details, please refer to our paper.
 
