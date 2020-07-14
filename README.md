@@ -4,7 +4,7 @@ Imlementation of _"Transfer Learning from Monolingual ASR to Transcription-free 
 
 We provide our pretrained monolingual uni-directional acoustic model and speaker encoder for reproduction. According to our paper, the uni-directinal content extractor may not generate the best result, but it's good enough.  
   
-All the VC data are from Voice Conversion Challenge 2020 (http://www.vc-challenge.org/) and all the generated speech are submitted to the challenge for listening review, including intra-lingual and cross-lingual VC tasks.  
+All the VC data are from [Voice Conversion Challenge 2020](http://www.vc-challenge.org/) and all the generated speech are submitted to the challenge for listening review, including intra-lingual and cross-lingual VC tasks.  
 
 For more details, please refer to our paper.
 
@@ -20,7 +20,7 @@ For more details, please refer to our paper.
 
 ## Preprocessing
 1. Clone this repository.
-2. Download data from VCC 2020. (http://www.vc-challenge.org/)
+2. Access data from [VCC 2020](http://www.vc-challenge.org/).
 3. Prepare training data for Waveglow vocoder.
 ```bash
 python prepare_h5.py --mode 0
@@ -62,6 +62,6 @@ converted wav files are in the output directory in the formate of "target_source
 
 
 ## Reference
-1. guanlongzhao's fac-via-ppg (https://github.com/guanlongzhao/fac-via-ppg)
-2. NVIDIA's Waveglow and Tacotron2 (https://github.com/NVIDIA/waveglow, https://github.com/NVIDIA/tacotron2)
-3. pytorch's audio (https://github.com/pytorch/audio)
+1. guanlongzhao's [fac-via-ppg](https://github.com/guanlongzhao/fac-via-ppg)
+2. NVIDIA's [Waveglow](https://github.com/NVIDIA/waveglow) and [Tacotron2](https://github.com/NVIDIA/tacotron2)
+3. pytorch's [audio](https://github.com/pytorch/audio)
