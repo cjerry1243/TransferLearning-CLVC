@@ -1,17 +1,17 @@
-
 import os
+import sys
+import json
 import h5py
 import math
 import random
 import argparse
-import json
+
 import torch
 import torch.utils.data
-import sys
 import numpy as np
 from scipy.io.wavfile import read
-
 from common.layers import TacotronSTFT
+
 
 MAX_WAV_VALUE = 32768.0
 
@@ -62,16 +62,12 @@ class Mel2Samp(torch.utils.data.Dataset):
         melspec = torch.squeeze(melspec, 0)
         return melspec
 
-
     def __getitem__(self, index):
         if self.h5_mel is None:
             self.h5_mel = h5py.File(self.h5_melfile, "r")
-
         audio_gp = self.h5_mel[str(index)]["24k"]
-        
         audio_start = random.randint(0, audio_gp.shape[0] - self.segment_length)
         audio = torch.FloatTensor(audio_gp[audio_start : audio_start + self.segment_length])
-
         mel = self.get_mel(audio)
 
         audio = audio / MAX_WAV_VALUE

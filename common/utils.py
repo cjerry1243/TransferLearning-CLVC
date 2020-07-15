@@ -1,4 +1,3 @@
-
 import numpy as np
 from scipy.io.wavfile import read
 import torch
@@ -127,7 +126,7 @@ def get_inference(seq, model, is_clip=False):
 
     Args:
         seq: T*D numpy array.
-        model: Tacotron spk_embedder.
+        model: Tacotron model.
         is_clip: Set to True to avoid the artifacts at the end.
 
     Returns:
@@ -145,7 +144,7 @@ def get_inference(seq, model, is_clip=False):
 
 
 def load_waveglow_model(path):
-    model = torch.load(path)['spk_embedder']
+    model = torch.load(path)['model']
     model = model.remove_weightnorm(model)
     model.cuda().eval()
     return model

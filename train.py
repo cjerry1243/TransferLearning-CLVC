@@ -1,4 +1,3 @@
-
 import os
 import json
 import torch
@@ -96,7 +95,6 @@ def train(output_directory, epochs, learning_rate,
         outputs = model((mel, audio))
 
         loss = criterion(outputs)
-
         reduced_loss += loss.item()
 
         if fp16_run:

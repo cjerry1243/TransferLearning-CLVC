@@ -1,29 +1,25 @@
 import os
 import math
 import h5py
-import torch
-import numpy as np
-import argparse
-import librosa
 import time
-from mel2samp import files_to_list, MAX_WAV_VALUE
-from denoiser import Denoiser
+import torch
+import librosa
+import argparse
+import numpy as np
 from scipy.io.wavfile import read, write
+
+from denoiser import Denoiser
+from train_ppg2mel_spk import *
 from prepare_h5 import frame_inference
 from common.hparams_spk import create_hparams
 from common.model import Tacotron2_multispeaker
-from train_ppg2mel_spk import *
 from spk_embedder.embedder import SpeechEmbedder
-
-
-def get_mel(y):
-	y = librosa.core.stft(y, n_fft=512, hop_length=160, win_length=400, window='hann')
-	mel = np.log10(np.dot(mel_basis, np.abs(y) ** 2) + 1e-6)
-	return mel
+from mel2samp import files_to_list, MAX_WAV_VALUE
 
 
 torch.backends.cudnn.enabled = True
 torch.backends.cudnn.benchmark = True
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-ch', "--checkpoint_path", type=str, required=True)
@@ -41,6 +37,7 @@ args = parser.parse_args()
 os.makedirs(args.outputs, exist_ok=True)
 
 
+### load ppg model
 model = torch.jit.load(args.model).eval()
 
 ### load ppg2mel model
@@ -56,11 +53,9 @@ ppg2mel_model.cuda().eval()
 waveglow = torch.load(args.waveglow)['model']
 waveglow = waveglow.remove_weightnorm(waveglow)
 waveglow = waveglow.cuda().eval()
-
 if args.is_fp16:
 	from apex import amp
 	waveglow, _ = amp.initialize(waveglow, [], opt_level="O3")
-
 if args.denoiser_strength > 0:
 	denoiser = Denoiser(waveglow).cuda()
 

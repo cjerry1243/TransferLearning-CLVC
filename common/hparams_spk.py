@@ -1,13 +1,9 @@
-
-
 class HParamsView(object):
     def __init__(self, d):
         self.__dict__ = d
 
 
 def create_hparams(**kwargs):
-    """Create spk_embedder hyperparameters. Parse nondefault from given string."""
-
     hparams = {
         ################################
         # Experiment Parameters        #

@@ -555,5 +555,3 @@ class Tacotron2_multispeaker(nn.Module):
         outputs = self.parse_output([acoustic_outputs, acoustic_outputs_postnet, gate_outputs, alignments])
 
         return outputs
-
-
