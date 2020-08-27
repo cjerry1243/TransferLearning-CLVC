@@ -2,10 +2,11 @@
 
 Imlementation of _"Transfer Learning from Monolingual ASR to Transcription-free Cross-lingual Voice Conversion."_  
 
-We provide our pretrained monolingual uni-directional acoustic model (in the ppg/ directory) and speaker encoder (in the spk_embedder/ directory) for reproduction. It may not generate the best result, but it's good enough.  
+We provide our pretrained monolingual uni-directional acoustic model (in the ppg/ directory) and speaker encoder (in the spk_embedder/ directory) for reproduction of our multispeaker VC model. It may not generate the best result, but it's good enough.  
   
 All the VC data are from [Voice Conversion Challenge 2020](http://www.vc-challenge.org/) and all the generated speech are submitted to the challenge for listening review, including intra-lingual and cross-lingual VC tasks.  
 
+Audio samples of our best model can be found [here](https://drive.google.com/drive/folders/1q9ZF8BatBItM9IwZ-YEIUG2Dde-Cz7Ha?usp=sharing).
 For more details, please refer to our paper.
 
 
@@ -20,13 +21,13 @@ For more details, please refer to our paper.
 
 
 ## Preprocessing
-1. Clone this repository.
-2. Access data from [VCC 2020](http://www.vc-challenge.org/). Inside the "vcc2020_training" folder there should be 14 speakers, and in the "vcc2020_evaluation" folder there should be 4 source speakers.
+1. Clone this repository.  
+2. Access data from [VCC 2020](http://www.vc-challenge.org/). Inside the "vcc2020_training" folder there should be 14 speakers, and in the "vcc2020_evaluation" folder there should be 4 source speakers.  
 3. Prepare training data for Waveglow vocoder.
 ```bash
 python prepare_h5.py --mode 0 -vcc "path_to_vcc2020_training" 
 ```
-This would generate an h5 file that concatenates all the speech for each speaker.
+This would generate an h5 file that concatenates all the speech for each speaker.  
 4. Prepare training data for the conversion model.
 ```bash
 python prepare_h5.py --mode 1
