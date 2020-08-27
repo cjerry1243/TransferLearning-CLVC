@@ -28,6 +28,7 @@ For more details, please refer to our paper.
 python prepare_h5.py --mode 0 -vcc "path_to_vcc2020_training" 
 ```
 This would generate an h5 file that concatenates all the speech for each speaker.  
+
 4. Prepare training data for the conversion model.
 ```bash
 python prepare_h5.py --mode 1
@@ -47,7 +48,8 @@ The training would take a few days. Please be patient.
 ## Training the conversion model
 1. Modify common/hparams_spk.py for your desired checkpoint directory and hyperparameters.
 Be aware that the "n_symbols" can only be 72 or 514, depending on which feature you want to use.
-3. Run the training script
+
+2. Run the training script
 ```bash
 python train_ppg2mel_spk.py
 ```
