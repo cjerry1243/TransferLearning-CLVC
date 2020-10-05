@@ -1,6 +1,6 @@
 # TransferLearning-CLVC
 
-Imlementation of _"Transfer Learning from Monolingual ASR to Transcription-free Cross-lingual Voice Conversion."_  
+Imlementation of _"[Transfer Learning from Monolingual ASR to Transcription-free Cross-lingual Voice Conversion.](https://arxiv.org/abs/2009.14668)"_  
 
 We provide our pretrained monolingual uni-directional acoustic model (in the ppg/ directory) and speaker encoder (in the spk_embedder/ directory) for reproduction of our multispeaker VC model. It may not generate the best result, but it's good enough.  
   
