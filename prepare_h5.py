@@ -71,10 +71,10 @@ def create_vcc_spk_h5(config_path="config_24k.json", h5_audio_path="VCC_audio.h5
         mel = np.log10(np.dot(mel_basis, np.abs(y) ** 2) + 1e-6)
         return mel
 
-    model = torch.jit.load(os.path.join("ppg", "trace512_77_correct1_epoch-352_feature.pth"))
+    model = torch.jit.load(os.path.join("ppg", "trace512_uni_77_epoch-142_feature.pth"))
     model = model.cuda().eval() if use_cuda else model.cpu().eval()
 
-    model_ppg = torch.jit.load(os.path.join("ppg", "trace512_77_correct1_epoch-352.pth"))
+    model_ppg = torch.jit.load(os.path.join("ppg", "trace512_uni_77_epoch-142.pth"))
     model_ppg = model_ppg.cuda().eval() if use_cuda else model_ppg.cpu().eval()
 
     min_audio_seconds = 10

@@ -35,3 +35,11 @@ def get_mfcc_features(path, pad_zero=False):
     mfccs = MFCC_Model(torch.FloatTensor(sig/32768.0).unsqueeze(0)).squeeze(0).transpose(0, 1) # (t, n_mfcc)
     return mfccs, len(sig), rate
 
+
+def get_mfcc_stats():
+    mean = torch.load("ppg/mean_mfcc_40.pth")
+    std = torch.load("ppg/std_mfcc_40.pth")
+    return mean, std
+
+
+mean, std = get_mfcc_stats()
