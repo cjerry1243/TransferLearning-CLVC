@@ -6,7 +6,7 @@ We provide our pretrained monolingual uni-directional acoustic model (in the ppg
   
 All the VC data are from [Voice Conversion Challenge 2020](http://www.vc-challenge.org/) and all the generated speech are submitted to the challenge for listening review, including intra-lingual and cross-lingual VC tasks.  
 
-Audio samples of our best model can be found [here](https://drive.google.com/drive/folders/1q9ZF8BatBItM9IwZ-YEIUG2Dde-Cz7Ha?usp=sharing).
+Audio samples of our best model can be found [here](https://drive.google.com/drive/folders/1krKezO8zHdn2bqz5LVt2QG4iFk_UdH52?usp=sharing).
 For more details, please refer to our paper.
 
 
